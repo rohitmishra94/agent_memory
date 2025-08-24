@@ -185,7 +185,7 @@ class VectorMemoryStorage:
             
             # If you have filters, you might need to modify get_full_context to handle them
             # For now, using your function as-is
-            top_context, top_ids = get_full_context_func(
+            top_context, top_ids = await get_full_context_func(
                 query=[query], 
                 collection=self.collection, 
                 n_results=n_results, 
