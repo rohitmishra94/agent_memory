@@ -328,6 +328,62 @@ class VectorMemoryStorage:
             logger.error(f"Error getting memory stats: {e}")
             return {"error": str(e)}
 
+# Example usage with your setup
+async def example_usage():
+    """Example of how to use VectorMemoryStorage with your ChromaDB setup."""
+    
+    # Your existing setup
+    from FlagEmbedding import BGEM3FlagModel
+    import chromadb
+    from chromadb import Documents, EmbeddingFunction, Embeddings
+    
+    class MyEmbeddingFunction(EmbeddingFunction):
+        def __call__(self, input: Documents) -> Embeddings:
+            return embedding_function_bge(input)
+
+    def embedding_function_bge(text_list):
+        return model.encode(text_list, return_dense=True)['dense_vecs']
+
+    model = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True)
+    default_ef = MyEmbeddingFunction()
+
+    client = await chromadb.AsyncHttpClient(host='localhost', port=8000)
+    
+    user_id = "user_123"
+    collection = await client.get_or_create_collection(
+        name=user_id,
+        embedding_function=default_ef
+    )
+    
+    # Initialize storage
+    storage = VectorMemoryStorage(collection, user_id)
+    await storage.initialize_counter()
+    
+    # Store memories (example)
+    # memory_output = ... (from your memory agent)
+    # stored_ids = await storage.store_memories(memory_output, "session_456")
+    
+    # Retrieve relevant memories using your custom function
+    relevant = await storage.get_relevant_memories(
+        query="React development preferences",
+        get_full_context_func=get_full_context,  # Your function
+        model=model,
+        n_results=10,
+        top=3,
+        category_filter="Technical"
+    )
+    
+    print(f"Found {relevant['total_found']} relevant memories")
+    for i, context in enumerate(relevant['contexts']):
+        print(f"{i+1}. {context[:100]}...")
+    
+    # Get recent context
+    recent = await storage.get_recent_context(days=7)
+    print(f"Recent context: {len(recent)} memories")
+    
+    # Get stats
+    stats = await storage.get_memory_stats()
+    print(f"Memory stats: {stats}")
 
 # Helper functions you'll need
 def get_unique_text_indices(text_list):
@@ -341,5 +397,3 @@ def get_unique_text_indices(text_list):
             unique_indices.append(i)
 
     return unique_indices
-
-

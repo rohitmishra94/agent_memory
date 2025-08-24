@@ -79,11 +79,11 @@ def get_unique_text_indices(text_list):
             unique_indices.append(i)
     return unique_indices
 
-def get_full_context(query, collection, n_results=5, top=2):
-    """Your custom context retrieval function."""
+async def get_full_context(query, collection, n_results=5, top=2):
+    """Your custom context retrieval function - now async."""
     logger.info(f'Querying collection for context retrieval')
     
-    result = collection.query(query_texts=query, n_results=n_results)
+    result = await collection.query(query_texts=query, n_results=n_results)
     texts = result['documents'][0]
     ids = result['ids'][0]
     unique_indices = get_unique_text_indices(texts)
@@ -104,7 +104,7 @@ def get_full_context(query, collection, n_results=5, top=2):
         try:
             pre_id, post_id = str(int(id)-1), str(int(id)+1)
             full_context_ids.append([pre_id, id, post_id])
-            full_context = collection.get(ids=[pre_id, id, post_id])['documents']
+            full_context = (await collection.get(ids=[pre_id, id, post_id]))['documents']
             full_context = ''.join(full_context)
             full_context_colbert_vec = model.encode([full_context], return_colbert_vecs=True)
             full_context_colbert_score = model.colbert_score(
@@ -122,7 +122,7 @@ def get_full_context(query, collection, n_results=5, top=2):
     top_context_ids_list = [full_context_ids[index] for index in sorted_indices][:top]
     flattened_list = np.array(top_context_ids_list).flatten().tolist()
     top_ids = list(set(flattened_list))
-    top_context = collection.get(ids=top_ids)['documents']
+    top_context = (await collection.get(ids=top_ids))['documents']
 
     logger.info(f'Context retrieved successfully')
     return top_context, top_ids
